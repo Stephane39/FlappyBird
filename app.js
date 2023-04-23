@@ -20,10 +20,11 @@ const config = {
 var game = new Phaser.Game(config)
 
 // Déclaration des variables globales
-let bird
-let inputs
-let speed = 1
+let SPEED = 1.5   
 let SPACE = 160
+let currentBird = 0
+let dernierTemps = 0
+let score = 0
 
 // Fonction qui retourne un nombre aléatoire pour la position initiale du tuyau
 function randomInt() {
@@ -35,11 +36,14 @@ function randomInt() {
 
 // Fonction qui charge les images nécessaires pour la scène
 function preload() {
-    this.load.image('bird', 'images/bird.png')
     this.load.image('background', 'images/background.png')
     this.load.image('ground', 'images/ground.png')
     this.load.image('tuyau', 'images/tuyau.png')
     this.load.image('tuyau_r', 'images/tuyau_r.png')
+
+    this.load.image('bird1', 'images/bird1.png')
+    this.load.image('bird2', 'images/bird2.png')
+    this.load.image('bird3', 'images/bird3.png')
 }
 
 // Fonction qui crée tous les éléments de la scène
@@ -71,8 +75,12 @@ function create() {
     tuyau_r.setPosition(config.width + tuyau_r.width/2, tuyau.y - SPACE - tuyau.height)
 
     // Ajout de l'oiseau et de ses collisions avec les différents éléments
-    bird = this.physics.add.image(config.width/2, config.height/2, "bird")
+    birds = ["bird1", "bird2", "bird3"]
+    bird = this.physics.add.image(config.width/2, config.height/2, "bird1")
     bird.body.collideWorldBounds = true
+
+    // Ajout du texte qui servira à afficher le score du joueur
+    text = this.add.text(10, 5, '0', { fontFamily: 'Arial', fontSize: 32, color: '#ffffff' });
 
     // Récupération des inputs clavier
     inputs = this.input.keyboard.createCursorKeys()
@@ -86,8 +94,8 @@ function updateGround() {
     if (ground2.x - ground2.width/2 <= -config.width) {
         ground2.setPosition(config.width + ground2.width/2, ground2.y)
     }
-    ground1.setPosition((ground1.x - speed), ground1.y) 
-    ground2.setPosition((ground2.x - speed), ground2.y)
+    ground1.setPosition((ground1.x - SPEED), ground1.y) 
+    ground2.setPosition((ground2.x - SPEED), ground2.y)
 }
 
 // Fonction qui met à jour la position du tuyau
@@ -96,22 +104,44 @@ function updateTuyaux() {
         tuyau.setPosition(config.width + tuyau.width, randomInt())  
         tuyau_r.setPosition(config.width + tuyau_r.width, tuyau.y - SPACE - tuyau.height)
     }
-    tuyau.setPosition((tuyau.x - speed), tuyau.y)
-    tuyau_r.setPosition((tuyau_r.x - speed), tuyau_r.y)
+    tuyau.setPosition((tuyau.x - SPEED), tuyau.y)
+    tuyau_r.setPosition((tuyau_r.x - SPEED), tuyau_r.y)
+}
+
+//Fonction qui calcul et met à jour le score du joueur
+function updateScore() {
+    if (bird.x === tuyau.x) {
+        score = score + 1
+        text.text = score
+    }
+}
+
+//Fonction qui met à jour la texture de l'oiseau, cette fonction s'execute toutes les 0.2 secondes
+function updateBird() {
+    currentBird = currentBird + 1
+    bird.setTexture(birds[currentBird%birds.length])
 }
 
 function collision() {
     // rechargement de la scène
     this.scene.restart()
+    score = 0
 }
 
 function update() {
     if (inputs.space.isDown){       
         bird.setVelocity(0, -300)
     }
-    // appel des fonctions d'update du sol et des tuyaux
+
+    // appel des fonctions d'update
+    let tempsActuel = this.time.now
+    if (tempsActuel - dernierTemps > 200) {
+        updateBird()
+        dernierTemps = tempsActuel
+    }
     updateGround()
     updateTuyaux()
+    updateScore()
 
     // ajout de la détection de collision
     this.physics.add.overlap(bird, tuyau, collision, null, this)
